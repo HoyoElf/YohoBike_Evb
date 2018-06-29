@@ -1,0 +1,106 @@
+apply plugin: 'com.android.application'
+android {
+    compileSdkVersion 27
+
+    afterEvaluate {
+        project.tasks.each { task ->
+            if (task.name.startsWith('collect') && task.name.endsWith('MultiDexComponents')) {
+                println "main-dex-filter: found task $task.name"
+                task.filter { name, attrs ->
+                    def componentName = attrs.get('android:name')
+                    if ('activity'.equals(name)) {
+                        println "main-dex-filter: skipping, detected activity [$componentName]"
+                        return false
+                    } else {
+                        println "main-dex-filter: keeping, detected $name [$componentName]"
+                        return true
+                    }
+                }
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    defaultConfig {
+        multiDexEnabled true
+        applicationId "yoho.bike.evb.com"
+        minSdkVersion 18
+        targetSdkVersion 27
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        debug {
+            minifyEnabled false  // 混淆
+            zipAlignEnabled true    // Zipalign优化
+            shrinkResources false    // 移除无用的resource文件
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+        release {
+            minifyEnabled false  // 混淆
+            zipAlignEnabled true    // Zipalign优化
+            shrinkResources false    // 移除无用的resource文件
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+        android.applicationVariants.all { variant ->
+            variant.outputs.all {
+                if (outputFileName.endsWith('.apk')) {
+                    if (variant.buildType.name == 'debug') {
+                        outputFileName = "BOCO_HEN_HomeEnsure_V${defaultConfig.versionName}_DEBUG.apk"
+                    } else if (variant.buildType.name == 'release') {
+                        outputFileName = "BOCO_HEN_HomeEnsure_V${defaultConfig.versionName}_${releaseTime()}_RELEASE.apk"
+                    }
+                }
+            }
+        }
+    }
+    sourceSets {
+        main {
+            /* 可以在res.srcDirs中配置多个可移植项目的res目录 */
+            res.srcDirs = ['src/main/res/']
+            assets.srcDirs = ['src/main/assets/']
+            jniLibs.srcDirs = ['libs']
+            resources.srcDirs = ['src']
+        }
+    }
+
+    repositories {
+        flatDir {
+            dirs 'libs'
+        }
+    }
+
+    lintOptions {
+        abortOnError false
+    }
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation 'com.android.support:appcompat-v7:27.1.1'
+    implementation 'com.android.support.constraint:constraint-layout:1.1.0'
+    testImplementation 'junit:junit:4.12'
+    androidTestImplementation 'com.android.support.test:runner:1.0.2'
+    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
+    annotationProcessor 'com.jakewharton:butterknife-compiler:8.8.1'
+    implementation 'com.jakewharton:butterknife:8.8.1'
+    implementation 'com.github.liujie045:HandyBase:2.4.5'
+    implementation 'com.github.Handy045:JointSweetAlertDialog:1.0.7'
+    implementation 'cn.bingoogolapple:bga-banner:2.2.4@aar'
+}
+
+// 获取当前系统时间
+static def releaseTime() {
+    String data = new Date().format("yyyy-MM-dd HH:mm", TimeZone.getTimeZone("GMT+08:00"));
+    data = data.replace(":", "");
+    data = data.replace("-", "");
+    data = data.replace(" ", "");
+    data = data.substring(2);
+    return data
+}
